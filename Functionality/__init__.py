@@ -1,4 +1,8 @@
-from .signals import Signal
+from .signals import (
+    Signal,
+    generate_signal,
+    generate_discrete_signal,
+)
 
 from .operations import (
     add_signals,
