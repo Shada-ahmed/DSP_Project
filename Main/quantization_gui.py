@@ -21,6 +21,8 @@ from PySide6.QtWidgets import (
     QMessageBox,
     QHeaderView,
     QSplitter,
+    QScrollArea,
+    QFrame,
 )
 
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
@@ -34,20 +36,27 @@ class SignalCanvas(FigureCanvasQTAgg):
     """Matplotlib canvas embedded in the PySide6 application."""
 
     def __init__(self, parent=None):
-        self.figure = Figure(figsize=(6, 3))
+        self.figure = Figure(figsize=(4.4, 3.0), dpi=100)
         self.axes = self.figure.add_subplot(111)
 
         super().__init__(self.figure)
         self.setParent(parent)
+        self.setMinimumHeight(285)
+        self.setMinimumWidth(350)
 
-        self.figure.tight_layout()
+        # Leave space above the axes so titles are never clipped.
+        self.figure.subplots_adjust(
+            left=0.22, right=0.98, bottom=0.24, top=0.80
+        )
+        self.axes.tick_params(axis="both", labelsize=8)
 
     def clear_plot(self, title, y_label):
         self.axes.clear()
-        self.axes.set_title(title)
-        self.axes.set_xlabel("Sample index n")
-        self.axes.set_ylabel(y_label)
-        self.axes.grid(True, alpha=0.3)
+        self.axes.set_title(title, fontsize=10, fontweight="bold", pad=10)
+        self.axes.set_xlabel("Sample index n", fontsize=8, labelpad=4)
+        self.axes.set_ylabel(y_label, fontsize=8, labelpad=5)
+        self.axes.tick_params(axis="both", labelsize=8)
+        self.axes.grid(True, alpha=0.28, linestyle="--")
 
     def plot_signal(self, signal, title, y_label="Amplitude"):
         self.clear_plot(title, y_label)
@@ -61,7 +70,9 @@ class SignalCanvas(FigureCanvasQTAgg):
                 basefmt="k-",
             )
 
-        self.figure.tight_layout()
+        self.figure.subplots_adjust(
+            left=0.22, right=0.98, bottom=0.24, top=0.80
+        )
         self.draw()
 
     def plot_comparison(self, original, quantized):
@@ -82,7 +93,53 @@ class SignalCanvas(FigureCanvasQTAgg):
         )
 
         self.axes.legend()
-        self.figure.tight_layout()
+        self.figure.subplots_adjust(
+            left=0.22, right=0.98, bottom=0.24, top=0.80
+        )
+        self.draw()
+
+    def plot_discrete_quantization(self, original, quantized):
+        """Show original samples and their quantized values together."""
+        self.clear_plot(
+            "Discrete Input + Quantized Signal",
+            "Amplitude",
+        )
+
+        if len(original) > 0:
+            # Original input: blue stems and circular sample markers.
+            self.axes.stem(
+                original.indices,
+                original.values,
+                linefmt="C0-",
+                markerfmt="C0o",
+                basefmt="k-",
+                label="Original input",
+            )
+
+            # Quantized output: orange square markers and a staircase.
+            self.axes.step(
+                quantized.indices,
+                quantized.values,
+                where="mid",
+                color="C1",
+                linestyle="--",
+                linewidth=1.5,
+                label="Quantized",
+            )
+            self.axes.plot(
+                quantized.indices,
+                quantized.values,
+                linestyle="None",
+                marker="s",
+                markersize=5,
+                color="C1",
+                label="_nolegend_",
+            )
+
+        self.axes.legend(fontsize=8, loc="best")
+        self.figure.subplots_adjust(
+            left=0.22, right=0.98, bottom=0.24, top=0.80
+        )
         self.draw()
 
 
@@ -91,7 +148,86 @@ class QuantizationWindow(QMainWindow):
         super().__init__()
 
         self.setWindowTitle("DSP Project - Signal Quantization")
-        self.resize(1250, 850)
+        self.resize(1320, 740)
+        self.setMinimumSize(1050, 620)
+        self.setStyleSheet("""
+            QWidget {
+                font-family: Segoe UI, Arial, sans-serif;
+                font-size: 10pt;
+            }
+            QMainWindow {
+                background-color: #f5f7fb;
+            }
+            QGroupBox {
+                font-weight: bold;
+                border: 1px solid #cbd5e1;
+                border-radius: 7px;
+                margin-top: 12px;
+                padding: 10px 8px 8px 8px;
+                background-color: #ffffff;
+            }
+            QGroupBox::title {
+                subcontrol-origin: margin;
+                left: 10px;
+                padding: 0 5px;
+                color: #243b53;
+            }
+            QLabel {
+                color: #243b53;
+            }
+            QPushButton {
+                background-color: #2563eb;
+                color: white;
+                border: none;
+                border-radius: 5px;
+                padding: 8px 12px;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                background-color: #1d4ed8;
+            }
+            QPushButton:pressed {
+                background-color: #1e40af;
+            }
+            QComboBox, QSpinBox {
+                background-color: white;
+                border: 1px solid #cbd5e1;
+                border-radius: 4px;
+                padding: 5px;
+                min-height: 24px;
+            }
+            QScrollArea {
+                background-color: #f5f7fb;
+            }
+            QScrollBar:vertical {
+                background: #eef2f7;
+                width: 13px;
+                margin: 2px;
+            }
+            QScrollBar::handle:vertical {
+                background: #aab8ca;
+                border-radius: 5px;
+                min-height: 30px;
+            }
+            QScrollBar::handle:vertical:hover {
+                background: #8295ad;
+            }
+            QTableWidget {
+                background-color: white;
+                alternate-background-color: #f1f5f9;
+                gridline-color: #d7dee8;
+                border: 1px solid #cbd5e1;
+                font-size: 9pt;
+            }
+            QHeaderView::section {
+                background-color: #e8eef7;
+                color: #243b53;
+                padding: 7px;
+                border: none;
+                border-bottom: 1px solid #cbd5e1;
+                font-weight: bold;
+            }
+        """)
 
         # Signal name -> Signal object
         self.signals = {}
@@ -105,12 +241,24 @@ class QuantizationWindow(QMainWindow):
         central = QWidget()
         self.setCentralWidget(central)
 
-        main_layout = QVBoxLayout(central)
-        main_layout.setSpacing(12)
+        outer_layout = QVBoxLayout(central)
+        outer_layout.setContentsMargins(0, 0, 0, 0)
+
+        scroll_area = QScrollArea()
+        scroll_area.setWidgetResizable(True)
+        scroll_area.setFrameShape(QFrame.Shape.NoFrame)
+        outer_layout.addWidget(scroll_area)
+
+        content = QWidget()
+        scroll_area.setWidget(content)
+
+        main_layout = QVBoxLayout(content)
+        main_layout.setContentsMargins(12, 10, 12, 12)
+        main_layout.setSpacing(9)
 
         title = QLabel("DSP Signal Quantization")
         title.setStyleSheet(
-            "font-size: 22px; font-weight: bold; padding: 6px;"
+            "font-size: 24px; font-weight: 700; color: #102a43; padding: 8px;"
         )
         main_layout.addWidget(title)
 
@@ -195,25 +343,37 @@ class QuantizationWindow(QMainWindow):
         # 3. Plots
         # --------------------------------------------------
 
-        plot_splitter = QSplitter(Qt.Orientation.Horizontal)
+        # Three charts in one row. The scroll area keeps the charts and
+        # result tables accessible on laptop screens without clipping.
+        plots_widget = QWidget()
+        plots_layout = QHBoxLayout(plots_widget)
+        plots_layout.setContentsMargins(0, 0, 0, 0)
+        plots_layout.setSpacing(8)
+        plots_widget.setMinimumHeight(300)
+
+        self.discrete_canvas = SignalCanvas()
+        self.discrete_canvas.clear_plot(
+            "Discrete Input Signal",
+            "Amplitude",
+        )
 
         self.comparison_canvas = SignalCanvas()
         self.comparison_canvas.clear_plot(
-            "Original vs Quantized Signal",
+            "Original vs Quantized",
             "Amplitude",
         )
 
         self.error_canvas = SignalCanvas()
         self.error_canvas.clear_plot(
             "Quantization Error",
-            "Error",
+            "Quantized - Original",
         )
 
-        plot_splitter.addWidget(self.comparison_canvas)
-        plot_splitter.addWidget(self.error_canvas)
-        plot_splitter.setSizes([600, 600])
+        plots_layout.addWidget(self.discrete_canvas, 1)
+        plots_layout.addWidget(self.comparison_canvas, 1)
+        plots_layout.addWidget(self.error_canvas, 1)
 
-        main_layout.addWidget(plot_splitter, 2)
+        main_layout.addWidget(plots_widget, 3)
 
         # --------------------------------------------------
         # 4. Results table
@@ -229,6 +389,8 @@ class QuantizationWindow(QMainWindow):
 
         self.results_table = QTableWidget()
         self.results_table.setColumnCount(5)
+        self.results_table.setAlternatingRowColors(True)
+        self.results_table.verticalHeader().setDefaultSectionSize(30)
         self.results_table.setHorizontalHeaderLabels(
             [
                 "Sample Index",
@@ -243,12 +405,16 @@ class QuantizationWindow(QMainWindow):
             QHeaderView.ResizeMode.Stretch
         )
 
+        self.results_table.setMinimumHeight(145)
+        self.results_table.setMaximumHeight(220)
         result_layout.addWidget(self.results_table)
 
         # Encoded values are displayed separately so the binary
         # strings retain leading zeros.
         self.encoded_table = QTableWidget()
         self.encoded_table.setColumnCount(2)
+        self.encoded_table.setAlternatingRowColors(True)
+        self.encoded_table.verticalHeader().setDefaultSectionSize(30)
         self.encoded_table.setHorizontalHeaderLabels(
             ["Sample Index", "Encoded Binary Value"]
         )
@@ -258,6 +424,8 @@ class QuantizationWindow(QMainWindow):
         )
 
         result_layout.addWidget(QLabel("Encoded Signal"))
+        self.encoded_table.setMinimumHeight(115)
+        self.encoded_table.setMaximumHeight(190)
         result_layout.addWidget(self.encoded_table)
 
         main_layout.addWidget(result_group, 3)
@@ -362,10 +530,19 @@ class QuantizationWindow(QMainWindow):
 
         self.current_signal = self.signals[name]
 
-        self.comparison_canvas.plot_signal(
+        # Show the discrete-time input as soon as a signal is selected.
+        self.discrete_canvas.plot_signal(
             self.current_signal,
-            "Original Input Signal",
+            "Discrete Input Signal",
+            "Amplitude",
         )
+
+        # Reset the comparison and error plots until quantization runs.
+        self.comparison_canvas.clear_plot(
+            "Original vs Quantized Signal",
+            "Amplitude",
+        )
+        self.comparison_canvas.draw()
 
         self.error_canvas.clear_plot(
             "Quantization Error",
@@ -457,6 +634,13 @@ class QuantizationWindow(QMainWindow):
 
         if signal is None or result is None:
             return
+
+        # Update the discrete plot to show both the original samples
+        # and the quantized values after quantization has completed.
+        self.discrete_canvas.plot_discrete_quantization(
+            signal,
+            result.quantized_signal,
+        )
 
         self.comparison_canvas.plot_comparison(
             signal,
