@@ -48,24 +48,41 @@ def read_signal(file_path):
 import matplotlib.pyplot as plt
 
 
-def plot_signal(signal, title="Discrete-Time Signal"):
+def plot_signal(
+    signal,
+    title="Discrete-Time Signal",
+    axes=None,
+    clear=True,
+    label=None,
+):
     """
-    Display a discrete-time signal using a stem plot.
+    Plot a discrete-time signal, optionally on an existing Matplotlib axis.
     """
 
-    plt.figure(figsize=(10, 5))
+    owns_figure = axes is None
+    if owns_figure:
+        _, axes = plt.subplots(figsize=(10, 5))
 
-    plt.stem(
+    if clear:
+        axes.clear()
+
+    axes.stem(
         signal.indices,
-        signal.values
+        signal.values,
+        label=label,
     )
 
-    plt.title(title)
-    plt.xlabel("n")
-    plt.ylabel("x[n]")
-    plt.grid(True)
+    axes.set_title(title)
+    axes.set_xlabel("n")
+    axes.set_ylabel("x[n]")
+    axes.grid(True)
 
-    plt.axhline(0, linewidth=1)
-    plt.axvline(0, linewidth=1)
+    axes.axhline(0, linewidth=1)
+    axes.axvline(0, linewidth=1)
 
-    plt.show()
+    if label is not None:
+        axes.legend()
+
+    if owns_figure:
+        axes.figure.tight_layout()
+        plt.show()

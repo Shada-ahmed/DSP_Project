@@ -17,3 +17,9 @@ from .utils import (
     read_signal,
     plot_signal
 )
+
+from .task5 import (
+    moving_average,
+    sharpening,
+    convolution,
+)

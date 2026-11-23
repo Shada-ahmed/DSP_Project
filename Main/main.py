@@ -188,6 +188,7 @@ class MainWindow(QMainWindow):
         # Input Signals list: (display name, Signal) - files or generated
         self.input_signals = []
         self.signal_controls = {}
+        self.task5_window = None
 
         self.create_ui()
 
@@ -553,6 +554,23 @@ class MainWindow(QMainWindow):
         cosine_action.triggered.connect(
             partial(self.set_selected_wave_type, "Cosine")
         )
+
+        task_menu = self.menuBar().addMenu("Tasks")
+        task5_action = task_menu.addAction("Task 5")
+        task5_action.triggered.connect(self.open_task5)
+
+    def open_task5(self):
+        if __package__:
+            from .task5_gui import Task5Window
+        else:
+            from task5_gui import Task5Window
+
+        if self.task5_window is None:
+            self.task5_window = Task5Window(self)
+
+        self.task5_window.show()
+        self.task5_window.raise_()
+        self.task5_window.activateWindow()
 
     def _create_generator_panel(self, parent_layout, number, wave_type, color):
         panel = QGroupBox(f"Signal {number}")
